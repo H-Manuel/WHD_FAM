@@ -209,6 +209,7 @@ void setup()
     delay(1000);
   }
   
+  //comment
   /*
   while (!maxlipo.begin(&Wire)) {
     Serial.println(F("Couldnt find Adafruit MAX17048?\nMake sure a battery is plugged in!"));
