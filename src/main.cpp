@@ -282,8 +282,7 @@ void strings_create()
 void setup()
 {
   Serial.begin(115200);
-  while (!Serial)
-    delay(10);
+  delay(1000);
   Wire.begin(47, 48); // I²C pins
 
   // Initialize MAX30102
