@@ -85,6 +85,16 @@ void sendSHT85Command(uint16_t command)
   Wire.endTransmission();
 }
 
+void setup_battery(){
+  maxlipo.begin(&Wire);
+  while (!maxlipo.begin()) {
+    Serial.println(F("Couldnt find Adafruit MAX17048?\nMake sure a battery is plugged in!"));
+    delay(2000);
+  }
+  Serial.print(F("Found MAX17048"));
+  Serial.print(F(" with Chip ID: 0x")); 
+  Serial.println(maxlipo.getChipID(), HEX);
+}
 // Function to read data from the SHT85
 bool readSHT85Data(uint16_t *temperature, uint16_t *humidity)
 {
@@ -112,8 +122,8 @@ int heartreat_read()
 {
   if (MAX30102._sHeartbeatSPO2.Heartbeat > 0)
   {
-    prev_heartrate = MAX30102._sHeartbeatSPO2.Heartbeat;
-    return MAX30102._sHeartbeatSPO2.Heartbeat;
+    prev_heartrate = MAX30102._sHeartbeatSPO2.Heartbeat-15;
+    return MAX30102._sHeartbeatSPO2.Heartbeat-15;
   }
   else
   {
@@ -195,9 +205,10 @@ void print()
   Serial.print(humPercent);
   Serial.println(" %");
 
-  Serial.print("Battery: ");
+  /*Serial.print("Battery: ");
   Serial.print(maxlipo.cellPercent(), 1);
   Serial.println(" %");
+  */
 }
 
 void strings_create()
@@ -282,17 +293,6 @@ void setup()
     delay(1000);
   }
 
-  // comment
-  /*
-  while (!maxlipo.begin(&Wire)) {
-    Serial.println(F("Couldnt find Adafruit MAX17048?\nMake sure a battery is plugged in!"));
-    delay(2000);
-  }
-  */
-  Serial.print(F("Found MAX17048"));
-  Serial.print(F(" with Chip ID: 0x"));
-  Serial.println(maxlipo.getChipID(), HEX);
-  Serial.println("MAX30102 init success!");
   MAX30102.sensorStartCollect();
 
   // Initialize SHT85
@@ -301,6 +301,7 @@ void setup()
   // WLAN- und UDP-Setup
   tryConnectWifi();
   setupUDP();
+  //setup_battery();
 
   pinMode(PT100_1_pin, INPUT);
   pinMode(PT100_2_pin, INPUT);
@@ -339,7 +340,7 @@ void loop()
   strings_create();
 
   udp.beginPacket(serverIp, port);
-  String message = String(heartreat_read()) + ";" + String(mean_heartrate_read()) + ";" + String(SPO2_read()) + ";" + String(tempC) + ";" + String(humPercent) + ";" + String(pressure_read()) + " ;" + String(maxlipo.cellPercent(), 1) + " ;" + pressure_sting + " ;" + heart_string + " ;" + SPO2_string + " ;" + temp_string + " ;" + hum_string;
+  String message = String(heartreat_read()) + ";" + String(mean_heartrate_read()) + ";" + String(SPO2_read()) + ";" + String(tempC) + ";" + String(humPercent) + ";" + String(pressure_read()) /*+ " ;" + String(maxlipo.cellPercent(), 1)*/ + " ;" + pressure_sting + " ;" + heart_string + " ;" + SPO2_string + " ;" + temp_string + " ;" + hum_string;
   udp.println(message);
   udp.endPacket();
   delay(4000); // Delay between measurements
