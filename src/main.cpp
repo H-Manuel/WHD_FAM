@@ -10,22 +10,26 @@
 #define MAX30102_I2C_ADDRESS 0x57
 #define SHT85_I2C_ADDRESS 0x44
 #define BATTERY_I2C_ADDRESS 0x36 // MAX17048G+T10
-int heartrate = 0; //
+// int heartrate = 0; //
 int mean_heartrate = 0;
+String heart_string;
 int arr_heartrate[5] = {};
 int arr_counter = 0;
-int SPO2 = 0; //
-int mean_temperature = 0;
+// int SPO2 = 0; //
+String SPO2_string;
+// int mean_temperature = 0;
 int pressure = 0;
-int start_pressure=0;
+int start_pressure = 0;
 String pressure_sting;
 int PT100_1_pin = 4;
 int PT100_2_pin = 7;
 int FSR_pin = 16;
-int prev_heartbeat = 0;
+int prev_heartrate = 0;
 int prev_SPO2 = 0;
 float tempC = 0;
+String temp_string;
 float humPercent = 0;
+String hum_string;
 int wifi_counter = 0;
 
 DFRobot_BloodOxygen_S_I2C MAX30102(&Wire, MAX30102_I2C_ADDRESS);
@@ -104,16 +108,16 @@ bool readSHT85Data(uint16_t *temperature, uint16_t *humidity)
   return false;
 }
 
-int heartbeat_read()
+int heartreat_read()
 {
   if (MAX30102._sHeartbeatSPO2.Heartbeat > 0)
   {
-    prev_heartbeat = MAX30102._sHeartbeatSPO2.Heartbeat;
+    prev_heartrate = MAX30102._sHeartbeatSPO2.Heartbeat;
     return MAX30102._sHeartbeatSPO2.Heartbeat;
   }
   else
   {
-    return prev_heartbeat;
+    return prev_heartrate;
   }
 }
 
@@ -145,7 +149,7 @@ int mean_heartrate_read()
   }
 
   // Füge den neuen Wert an der ersten Stelle ein
-  arr_heartrate[0] = heartbeat_read();
+  arr_heartrate[0] = heartreat_read();
 
   // Berechne den Durchschnitt
   mean_heartrate = 0;
@@ -164,7 +168,7 @@ void print()
   Serial.println("%");
 
   Serial.print("Heartrate: ");
-  Serial.print(heartbeat_read());
+  Serial.print(heartreat_read());
   Serial.println(" bpm");
   /*
   for (int i = 0; i < (sizeof(arr_heartrate) / sizeof(arr_heartrate[0])); i++)
@@ -196,10 +200,79 @@ void print()
   Serial.println(" %");
 }
 
+void strings_create()
+{
+  if (pressure_read() - 20 > start_pressure)
+  {
+    pressure_sting = "high";
+  }
+  else if (pressure_read() + 20 < start_pressure)
+  {
+    pressure_sting = "low";
+  }
+  else
+  {
+    pressure_sting = "stable";
+  }
+
+  if (heartreat_read() - 3 > 190)
+  {
+    heart_string = "high";
+  }
+  else if (pressure_read() + 3 < 30)
+  {
+    heart_string = "low";
+  }
+  else
+  {
+    heart_string = "stable";
+  }
+
+  if (SPO2_read() > 100)
+  {
+    SPO2_string = "high";
+  }
+  else if (SPO2_read() < 92)
+  {
+    SPO2_string = "low";
+  }
+  else
+  {
+    SPO2_string = "stable";
+  }
+
+  if (tempC > 38)
+  {
+    temp_string = "high";
+  }
+  else if (pressure_read() < 92)
+  {
+    temp_string = "low";
+  }
+  else
+  {
+    temp_string = "stable";
+  }
+
+  if (humPercent > 60)
+  {
+    hum_string = "to wet";
+  }
+  else if (pressure_read() < 40)
+  {
+    hum_string = "too dry";
+  }
+  else
+  {
+    hum_string = "stable";
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
-  while (!Serial) delay(10);
+  while (!Serial)
+    delay(10);
   Wire.begin(47, 48); // I²C pins
 
   // Initialize MAX30102
@@ -208,8 +281,8 @@ void setup()
     Serial.println("MAX30102 init fail!");
     delay(1000);
   }
-  
-  //comment
+
+  // comment
   /*
   while (!maxlipo.begin(&Wire)) {
     Serial.println(F("Couldnt find Adafruit MAX17048?\nMake sure a battery is plugged in!"));
@@ -217,7 +290,7 @@ void setup()
   }
   */
   Serial.print(F("Found MAX17048"));
-  Serial.print(F(" with Chip ID: 0x")); 
+  Serial.print(F(" with Chip ID: 0x"));
   Serial.println(maxlipo.getChipID(), HEX);
   Serial.println("MAX30102 init success!");
   MAX30102.sensorStartCollect();
@@ -233,12 +306,10 @@ void setup()
   pinMode(PT100_2_pin, INPUT);
   pinMode(FSR_pin, INPUT);
 
-  start_pressure=pressure_read();
+  start_pressure = pressure_read();
 
   Serial.println("Setup complete.");
 }
-
-
 
 void loop()
 {
@@ -263,24 +334,12 @@ void loop()
   {
     Serial.println("SHT85 read failed!");
   }
+
   print();
-
-  if (pressure_read()-3>start_pressure){
-    pressure_sting="Druck gestiegen";
-  }
-  else if (pressure_read()+3<start_pressure)
-  {
-    pressure_sting="Druck gestiegen";
-  }
-  else
-  {
-    pressure_sting="Druck stabil";
-  }
-  
-
+  strings_create();
 
   udp.beginPacket(serverIp, port);
-  String message = String(heartbeat_read()) + ";" + String(mean_heartrate_read()) + ";" + String(SPO2_read()) + ";" + String(tempC) + ";" + String(humPercent) + ";" + String(pressure_read()) + " ;" + String(maxlipo.cellPercent(), 1)+ " ;" + pressure_sting;
+  String message = String(heartreat_read()) + ";" + String(mean_heartrate_read()) + ";" + String(SPO2_read()) + ";" + String(tempC) + ";" + String(humPercent) + ";" + String(pressure_read()) + " ;" + String(maxlipo.cellPercent(), 1) + " ;" + pressure_sting + " ;" + heart_string + " ;" + SPO2_string + " ;" + temp_string + " ;" + hum_string;
   udp.println(message);
   udp.endPacket();
   delay(4000); // Delay between measurements
